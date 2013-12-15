@@ -1,0 +1,16 @@
+This game is very much in an alpha state. You start on a grass field near a sword and shield, both of which can be picked up and dropped. The sword emitts light to test the multiple light source system. There is a pink building to the north west, again testing the lighting/field of view system and collision detection. If you travel off the map to the north, you will find a new area with a large blue building. You can't move outside these two areas.
+
+KEY BINDINGS
+
+Gameplay
+
+Arrow keys/ number pad: Move player
+g: Pick up item
+d: drop item
+t: test (currently activates a menu asking to shoose a pony, and prints the element of that pony to the console)
+ESC: main menu
+
+Menus
+
+Up/down arrows or 2/8 on the keypad: change selection
+Enter: Make selection

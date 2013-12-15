@@ -10,7 +10,8 @@ Archetecture
 ------------
 
 This program was written in Python version 2.7.3
-It relies heavily on the libtcod library for roguelikes, version 1.5.1
+
+It relies heavily on the libtcod library for roguelikes, version 1.5.1. Documentation for libtcod can be found at http://doryen.eptalys.net/data/libtcod/doc/1.5.1/index2.html
 
 License
 -------
