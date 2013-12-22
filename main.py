@@ -26,6 +26,7 @@ SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 LIMIT_FPS = 20
 
+#Constants for defining various parts of the main screen
 MAP_WIDTH = mapgen.MAP_WIDTH
 MAP_HEIGHT = mapgen.MAP_HEIGHT
 MAP_WINDOW_WIDTH = 50
@@ -35,25 +36,27 @@ PANEL_HEIGHT = SCREEN_HEIGHT
 MSG_WIDTH = PANEL_WIDTH
 MSG_HEIGHT = 20
 
+#Constants for the FOV calculations
 FOV_ALGO = 0
 TORCH_RADIUS = 50
 FOV_LIGHT_WALLS = True
 
 MENU_HILIGHT = libtcod.Color(120, 153, 34)
 
+#Setting custom font. Later this might be changed to allow custom tilesets.
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 
-#initialising the root console
+#Initialising the root console.
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Ponyhack', False)
 
-#The virtual console the map will be drawn on before blitting to root
+#The virtual console the map will be drawn on before blitting to root.
 mapcon = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
 
-#The panel with various game information
+#The panel with various game information.
 panel = libtcod.console_new(PANEL_WIDTH, PANEL_HEIGHT)
 
 class Area:
-	#class for area objects
+	#Class for area objects.
 	def __init__(self, X, Y, map, name, objects, dark=False):
 		global areas		
 		self.X = X
@@ -62,13 +65,13 @@ class Area:
 		self.map = map
 		self.objects = objects
 		self.dark = dark
-		#append the new area to the areas dictionary
+		#Append a new area to the areas dictionary.
 		if not self.X in areas:
 			areas[X] = {}
 		areas[X][Y] = self
 
 class Object:
-	#generic class for all map objects
+	#Generic class for all map objects.
 	def __init__(self, x, y, X, Y, name, char, color, blocks=False, inventory=[], light_emittance=0, creature=None, item=None):
 		self.x = x
 		self.y = y
@@ -105,11 +108,13 @@ class Object:
 		elif y > MAP_HEIGHT - 1:
 			if self.change_area(0, 1):
 				self.y = 0
+		#Otherwise check whether the tile is blocked and if not, move to it.
 		elif not current_area.map[x][y].blocked:
 			self.x = x
 			self.y = y
 
 	def change_area(self, dX, dY):
+		#Changing the area that an object exists in.
 		global current_area
 		new_X = self.X + dX
 		new_Y = self.Y + dY
@@ -125,13 +130,16 @@ class Object:
 		return False
 
 	def draw(self):
+		#Drawing the object to the map.
 		libtcod.console_set_default_foreground(mapcon, self.color)
 		libtcod.console_put_char(mapcon, self.x, self.y, self.char, libtcod.BKGND_NONE)
 
 	def clear(self):
+		#clearing the object from the map.
 		libtcod.console_put_char(mapcon, self.x, self.y, ' ', libtcod.BKGND_NONE)
 
 class Creature:
+	#Component for all creature objects.
 	def __init__(self, hp, stamina, strength, dexterity, toughness):
 		self.max_hp = hp
 		self.hp = hp
@@ -157,10 +165,12 @@ class Creature:
 			self.hp = self.max_hp
 
 class Item:
+	#Component for all item objects.
 	def __init__(self, use_function=None):
 		self.use_function = use_function
 
 	def pick_up(self):
+		#Picking up the object. Currently only the player can do this, but eventually NPCs will be able to too.
 		inv.append(self.owner)
 		current_area.objects.remove(self.owner)
 		message('You picked up a ' + self.owner.name + '.', color=libtcod.desaturated_green)
@@ -211,6 +221,7 @@ def handle_keys():
 			key_char = chr(key.c)
 
 			if key_char == 't':
+				#[t]est key, currently testing the menu function.
 				option = menu('pony choice', ['Rarity', 'Applejack', 'Rainbow Dash'], 30)
 				if option == 0:
 					print 'Generosity'
@@ -221,11 +232,13 @@ def handle_keys():
 				else: print 'menu error'
 
 			if key_char == 'g':
+				#Picking up / [g]rabbing items.
 				for object in current_area.objects:
 					if object.x == player.x and object.y == player.y and object != player:
 						object.item.pick_up()
 
 			if key_char == 'd':
+				#[d]rop an item.
 				if len(inv) > 0:
 					list = []
 					for object in inv:
@@ -314,7 +327,7 @@ def render_all():
 	global fov_map, fov_recompute
 	map = current_area.map
 
-	#define the upper left corner of the visable map
+	#define the upper left corner of the visible map
 	start_x = player.x - MAP_WINDOW_WIDTH/2
 	if start_x < 0:
 		start_x = 0
@@ -463,7 +476,7 @@ def main_menu():
 		if choice == 0:
 			play_game()
 		elif choice == 1:
-			break
+			break #Exit the game.
 
 new_game()
 main_menu()
