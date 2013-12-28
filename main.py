@@ -72,7 +72,7 @@ class Area:
 
 class Object:
 	#Generic class for all map objects
-	def __init__(self, x, y, X, Y, name, char, color, blocks=False, inventory=[], light_emittance=0, creature=None, item=None):
+	def __init__(self, x, y, X, Y, name, char, color, blocks=False, inventory=[], light_emittance=0, creature=None, item=None, equipment=None):
 		self.x = x
 		self.y = y
 		self.X = X
@@ -90,6 +90,12 @@ class Object:
 			self.creature.owner = self
 		self.item = item
 		if self.item:
+			self.item.owner = self
+		self.equipment = equipment
+		if self.equipment:
+			self.equipment.owner = self
+			#Equipment objects must be items and equippable.
+			self.item = Item(use_function=self.equipment.toggle_equip)
 			self.item.owner = self
 
 	def move(self, dx, dy):
@@ -142,14 +148,39 @@ class Object:
 class Creature:
 	#Component for all creature objects.
 	def __init__(self, hp, stamina, strength, dexterity, toughness, death_function=None):
-		self.max_hp = hp
+		self.base_max_hp = hp
 		self.hp = hp
-		self.max_stamina = stamina
+		self.base_max_stamina = stamina
 		self.stamina = stamina
-		self.strength = strength
-		self.dexterity = dexterity
-		self.toughness = toughness
+		self.base_strength = strength
+		self.base_dexterity = dexterity
+		self.base_toughness = toughness
 		self.death_function = death_function
+
+	@property
+	def max_hp(self):
+		bonus = sum(equipment.max_hp_bonus for equipment in get_all_equipped(self.owner))
+		return self.base_max_hp + bonus
+
+	@property
+	def max_stamina(self):
+		bonus = sum(equipment.max_stamina_bonus for equipment in get_all_equipped(self.owner))
+		return self.base_max_stamina + bonus
+
+	@property
+	def strength(self):
+		bonus = sum(equipment.strength_bonus for equipment in get_all_equipped(self.owner))
+		return self.base_strength + bonus
+
+	@property
+	def dexterity(self):
+		bonus = sum(equipment.dexterity_bonus for equipment in get_all_equipped(self.owner))
+		return self.base_dexterity + bonus
+
+	@property
+	def toughness(self):
+		bonus = sum(equipment.toughness_bonus for equipment in get_all_equipped(self.owner))
+		return self.base_toughness + bonus
 
 	def attack(self, target):
 		damage = self.strength - target.creature.toughness
@@ -187,9 +218,35 @@ class Item:
 		self.owner.y = player.y
 		self.owner.X = player.X
 		self.owner.Y = player.Y
+		if self.owner.equipment:
+			self.owner.equipment.dequip()
 		current_area.objects.append(self.owner)
 		inv.remove(self.owner)
 		message('You dropped a ' + self.owner.name + '.', color=libtcod.desaturated_red)
+
+class Equipment:
+	#Component for equippable items.
+	def __init__(self, max_hp_bonus=0, max_stamina_bonus=0 , strength_bonus=0, toughness_bonus=0, dexterity_bonus=0, is_equipped = False):
+		self.max_hp_bonus = max_hp_bonus
+		self.max_stamina_bonus = max_stamina_bonus
+		self.strength_bonus = strength_bonus
+		self.toughness_bonus = toughness_bonus
+		self.dexterity_bonus = dexterity_bonus
+		self.is_equipped = is_equipped
+
+	def equip(self):
+		self.is_equipped = True
+		message('You equipped the ' + self.owner.name)
+
+	def dequip(self):
+		self.is_equipped = False
+		message('You dequipped the ' + self.owner.name)
+
+	def toggle_equip(self):
+		if self.is_equipped:
+			self.dequip()
+		else:
+			self.equip()
 
 
 ###GLOBAL FUNCTIONS###		
@@ -244,6 +301,22 @@ def handle_keys():
 					if object.x == player.x and object.y == player.y and object != player:
 						object.item.pick_up()
 
+			if key_char == 'i':
+				#Showing the inventory and using an item.
+				if len (inv) > 0:
+					list = []
+					for object in inv:
+						equipped = ''
+						if object.equipment:
+							if object.equipment.is_equipped:
+								equipped = ' (Equipped)'
+						list.append(object.name + equipped)
+					to_use = menu('Inventory', list, 30)
+					if to_use != None:
+						inv[to_use].item.use_function()
+				else:
+					message('You have nothing in your inventory')
+
 			if key_char == 'd':
 				#[d]rop an item.
 				if len(inv) > 0:
@@ -251,7 +324,8 @@ def handle_keys():
 					for object in inv:
 						list.append(object.name)
 					to_drop = menu('Drop Item',list, 30,)
-					inv[to_drop].item.drop()
+					if to_drop != None:
+						inv[to_drop].item.drop()
 				else:
 					message('You have nothing to drop.')
 
@@ -276,6 +350,16 @@ def player_move_or_attack(dx, dy):
 	else:
 		player.move(dx, dy)
 		fov_recompute = True
+
+def get_all_equipped(obj): #Returns a list of equipped items
+	equipped_list = []
+	if len(obj.inventory) > 0:
+		for item in obj.inventory:
+			if item.equipment and item.equipment.is_equipped:
+				equipped_list.append(item.equipment)
+			return equipped_list
+	else:
+		return []
 
 def menu(header, options, width,):
 	#The player is presented with some options and makes a choice based on graphics
@@ -315,10 +399,12 @@ def menu(header, options, width,):
 		libtcod.console_flush()
 
 		
-		#Up and down arrows change selection
-		libtcod.sys_wait_for_event(libtcod.EVENT_KEY_PRESS, key, mouse, True)	
+		libtcod.sys_wait_for_event(libtcod.EVENT_KEY_PRESS, key, mouse, True)
 		if key.vk == libtcod.KEY_ENTER:
 			return choice
+		if key.vk == libtcod.KEY_ESCAPE:
+			return None
+		#Up and down arrows change selection
 		elif key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8:
 			new_choice = choice - 1
 		elif key.vk == libtcod.KEY_DOWN or key.vk == libtcod.KEY_KP2:
@@ -333,6 +419,8 @@ def monster_death(monster):
 	monster.color = libtcod.dark_red
 	monster.blocks = False
 	monster.creature = None
+	monster.item = Item()
+	monster.item.owner = monster
 	message('The ' + monster.name +' has died!')
 	monster.name = 'remains of ' + monster.name
 
@@ -424,12 +512,20 @@ def render_panel():
 	#Render the stamina bar
 	render_bar(1, 3, PANEL_WIDTH - 2, 'STA', player.creature.stamina, player.creature.max_stamina, libtcod.blue, libtcod.dark_blue)
 
+	#Show the player stats
+	libtcod.console_set_default_foreground(panel, libtcod.white)
+	stats = ['STR: ' + str(player.creature.strength), 'TOU: ' + str(player.creature.toughness), 'DEX: ' + str(player.creature.dexterity)]
+	y = 5
+	for line in stats:
+		libtcod.console_print_ex(panel, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, line)
+		y += 1
+
 	#Write the game messages
 	y = 0
 	for line, color in game_msgs:
 		libtcod.console_set_default_foreground(panel, color)
 		libtcod.console_print_ex(panel, 0, PANEL_HEIGHT - MSG_HEIGHT + y, libtcod.BKGND_NONE, libtcod.LEFT, line)
-		y +=1
+		y += 1
 
 	libtcod.console_blit(panel, 0, 0, PANEL_WIDTH, PANEL_HEIGHT, 0, MAP_WINDOW_WIDTH, 0)
 
@@ -472,12 +568,15 @@ def new_game():
 	player = Object(MAP_WIDTH/2, MAP_HEIGHT/2, 0, 0, 'Player', '@', libtcod.white, light_emittance=12, creature=Creature(20, stamina=20, strength=5, dexterity=5, toughness=3))
 	practice_dummy = Object(MAP_WIDTH/2, MAP_HEIGHT/2 + 2, 0, 0, 'Practice Dummy', 'd', libtcod.red, creature=Creature(hp=10, stamina=10, strength=3, dexterity=5, toughness=2, death_function=monster_death))
 	inv = player.inventory
-	sword = Object(MAP_WIDTH/2 + 2, MAP_HEIGHT/2, 0, 0, 'Sword', '/', libtcod.darker_red, light_emittance=8, item=Item())
-	shield = Object(MAP_WIDTH/2 - 2, MAP_HEIGHT/2, 0, 0, 'Shield', '[', libtcod.darker_blue, item=Item())
+	sword = Object(MAP_WIDTH/2 + 2, MAP_HEIGHT/2, 0, 0, 'Sword', '/', libtcod.darker_red, light_emittance=8, equipment=Equipment(strength_bonus=2))
+	shield = Object(MAP_WIDTH/2 - 2, MAP_HEIGHT/2, 0, 0, 'Shield', '[', libtcod.darker_blue, equipment=Equipment(toughness_bonus=3))
 	current_area.objects.append(sword)
 	current_area.objects.append(shield)
 	current_area.objects.append(player)
 	current_area.objects.append(practice_dummy)
+#	for x in range(10):
+#		potion = Object(MAP_WIDTH/2, MAP_HEIGHT/2 + x, 0, 0, 'Potion', '!', libtcod.purple, item=Item())
+#		current_area.objects.append(potion)
 	initialise_fov()
 
 	game_state = 'playing'
