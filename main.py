@@ -72,7 +72,7 @@ class Area:
 
 class Object:
 	#Generic class for all map objects
-	def __init__(self, x, y, X, Y, name, char, color, blocks=False, inventory=[], light_emittance=0, creature=None, item=None, equipment=None):
+	def __init__(self, x, y, X, Y, name, char, color, blocks=False, inventory=None, light_emittance=0, creature=None, item=None, equipment=None, ai=None):
 		self.x = x
 		self.y = y
 		self.X = X
@@ -88,6 +88,8 @@ class Object:
 		self.creature = creature
 		if self.creature:
 			self.creature.owner = self
+			if not self.inventory:
+				self.inventory = []
 		self.item = item
 		if self.item:
 			self.item.owner = self
@@ -97,6 +99,9 @@ class Object:
 			#Equipment objects must be items and equippable.
 			self.item = Item(use_function=self.equipment.toggle_equip)
 			self.item.owner = self
+		self.ai = ai
+		if self.ai:
+			self.ai.owner = self
 
 	def move(self, dx, dy):
 		x = self.x + dx
@@ -134,6 +139,16 @@ class Object:
 				initialise_fov()
 				return True
 		return False
+
+	def distance(self, x, y):
+		#return the distance to some coordinates
+		return math.sqrt((x - self.x) ** 2 + (y - self.y) ** 2)
+
+	def distance_to(self, other):
+		#return the distance to an object
+		dx = other.x - self.x
+		dy = other.y - self.y
+		return math.sqrt(dx ** 2 + dy ** 2)
 
 	def draw(self):
 		#Drawing the object to the map.
@@ -207,21 +222,23 @@ class Item:
 	def __init__(self, use_function=None):
 		self.use_function = use_function
 
-	def pick_up(self):
+	def pick_up(self, target):
 		#Picking up the object. Currently only the player can do this, but eventually NPCs will be able to too.
-		inv.append(self.owner)
+#		inv.append(self.owner)
+#		current_area.objects.remove(self.owner)
+		target.inventory.append(self.owner)
 		current_area.objects.remove(self.owner)
-		message('You picked up a ' + self.owner.name + '.', color=libtcod.desaturated_green)
+		message(player.name + ' picked up a ' + self.owner.name + '.', color=libtcod.desaturated_green)
 
-	def drop(self):
-		self.owner.x = player.x
-		self.owner.y = player.y
-		self.owner.X = player.X
-		self.owner.Y = player.Y
+	def drop(self, target):
+		self.owner.x = target.x
+		self.owner.y = target.y
+		self.owner.X = target.X
+		self.owner.Y = target.Y
 		if self.owner.equipment:
 			self.owner.equipment.dequip()
 		current_area.objects.append(self.owner)
-		inv.remove(self.owner)
+		target.inventory.remove(self.owner)
 		message('You dropped a ' + self.owner.name + '.', color=libtcod.desaturated_red)
 
 class Equipment:
@@ -248,7 +265,14 @@ class Equipment:
 		else:
 			self.equip()
 
+##AI classes##
 
+class StaticMonster:
+	
+	def take_turn(self):
+		if self.owner.distance_to(player) < 2:
+			self.owner.creature.attack(player)
+		
 ###GLOBAL FUNCTIONS###		
 
 def handle_keys():
@@ -286,20 +310,31 @@ def handle_keys():
 
 			if key_char == 't':
 				#[t]est key, currently testing the menu function.
-				option = menu('pony choice', ['Rarity', 'Applejack', 'Rainbow Dash'], 30)
-				if option == 0:
-					print 'Generosity'
-				elif option == 1:
-					print 'Honesty'
-				elif option == 2:
-					print 'Loyalty'
-				else: print 'menu error'
+#				option = menu('pony choice', ['Rarity', 'Applejack', 'Rainbow Dash'], 30)
+#				if option == 0:
+#					print 'Generosity'
+#				elif option == 1:
+#					print 'Honesty'
+#				elif option == 2:
+#					print 'Loyalty'
+#				else: print 'menu error'
+				for object in current_area.objects:
+					print object.name + ':'
+					if object.inventory and len(object.inventory) > 0:
+						for item in object.inventory:
+							equipped = ''
+							if item.equipment and item.equipment.is_equipped:
+								equipped = ' E'
+							print item.name + equipped
+					else:
+						print object.inventory
+					print ''
 
 			if key_char == 'g':
 				#Picking up / [g]rabbing items.
 				for object in current_area.objects:
 					if object.x == player.x and object.y == player.y and object != player:
-						object.item.pick_up()
+						object.item.pick_up(player)
 
 			if key_char == 'i':
 				#Showing the inventory and using an item.
@@ -315,7 +350,7 @@ def handle_keys():
 					if to_use != None:
 						inv[to_use].item.use_function()
 				else:
-					message('You have nothing in your inventory')
+					message('You have nothing in your inventory.')
 
 			if key_char == 'd':
 				#[d]rop an item.
@@ -325,7 +360,7 @@ def handle_keys():
 						list.append(object.name)
 					to_drop = menu('Drop Item',list, 30,)
 					if to_drop != None:
-						inv[to_drop].item.drop()
+						inv[to_drop].item.drop(player)
 				else:
 					message('You have nothing to drop.')
 
@@ -357,7 +392,7 @@ def get_all_equipped(obj): #Returns a list of equipped items
 		for item in obj.inventory:
 			if item.equipment and item.equipment.is_equipped:
 				equipped_list.append(item.equipment)
-			return equipped_list
+		return equipped_list
 	else:
 		return []
 
@@ -420,6 +455,7 @@ def monster_death(monster):
 	monster.blocks = False
 	monster.creature = None
 	monster.item = Item()
+	monster.ai = None
 	monster.item.owner = monster
 	message('The ' + monster.name +' has died!')
 	monster.name = 'remains of ' + monster.name
@@ -566,7 +602,7 @@ def new_game():
 	current_area = Area(0, 0, mapgen.ponyville(), 'Central Ponyville', [])
 	#creature_component = Creature(hp=20, stamina=20, strength=5, dexterity=5, toughness=5)
 	player = Object(MAP_WIDTH/2, MAP_HEIGHT/2, 0, 0, 'Player', '@', libtcod.white, light_emittance=12, creature=Creature(20, stamina=20, strength=5, dexterity=5, toughness=3))
-	practice_dummy = Object(MAP_WIDTH/2, MAP_HEIGHT/2 + 2, 0, 0, 'Practice Dummy', 'd', libtcod.red, creature=Creature(hp=10, stamina=10, strength=3, dexterity=5, toughness=2, death_function=monster_death))
+	practice_dummy = Object(MAP_WIDTH/2, MAP_HEIGHT/2 + 2, 0, 0, 'Practice Dummy', 'd', libtcod.red, creature=Creature(hp=10, stamina=10, strength=5, dexterity=5, toughness=2, death_function=monster_death), ai=StaticMonster())
 	inv = player.inventory
 	sword = Object(MAP_WIDTH/2 + 2, MAP_HEIGHT/2, 0, 0, 'Sword', '/', libtcod.darker_red, light_emittance=8, equipment=Equipment(strength_bonus=2))
 	shield = Object(MAP_WIDTH/2 - 2, MAP_HEIGHT/2, 0, 0, 'Shield', '[', libtcod.darker_blue, equipment=Equipment(toughness_bonus=3))
@@ -574,9 +610,6 @@ def new_game():
 	current_area.objects.append(shield)
 	current_area.objects.append(player)
 	current_area.objects.append(practice_dummy)
-#	for x in range(10):
-#		potion = Object(MAP_WIDTH/2, MAP_HEIGHT/2 + x, 0, 0, 'Potion', '!', libtcod.purple, item=Item())
-#		current_area.objects.append(potion)
 	initialise_fov()
 
 	game_state = 'playing'
@@ -598,6 +631,11 @@ def play_game():
 		player_action = handle_keys()
 		if player_action == 'exit':
 			break #Exit the game
+		#Let monsters take thier turn.
+		if game_state == 'playing' and player_action != 'didnt-take-turn':
+			for object in current_area.objects:
+				if object.ai:
+					object.ai.take_turn()
 
 def main_menu():
 	while not libtcod.console_is_window_closed():
