@@ -120,7 +120,7 @@ class Object:
 			if self.change_area(0, 1):
 				self.y = 0
     #Otherwise check whether the tile is blocked and if not, move to it.
-		elif not current_area.map[x][y].blocked:
+		elif not is_blocked(x, y):
 			self.x = x
 			self.y = y
 
@@ -198,13 +198,27 @@ class Creature:
 		return self.base_toughness + bonus
 
 	def attack(self, target):
-		damage = self.strength - target.creature.toughness
+		if self.to_hit(target):
+			damage = self.strength - target.creature.toughness - 2 + dice(2, 3)
 
-		if damage > 0:
-			message('The ' + self.owner.name + ' attacks the ' + target.name + ' for ' + str(damage) + ' damage.')
-			target.creature.take_damage(damage)
+			if damage > 0:
+				#Make the target take damage.
+				message('The ' + self.owner.name + ' attacks the ' + target.name + ' for ' + str(damage) + ' damage.', libtcod.light_green)
+				target.creature.take_damage(damage)
+			else:
+				#Message to let the player know that no damage was done.
+				message('The ' + self.owner.name + ' attacks the ' + target.name + ' but the blow glances away!', libtcod.light_red)
 		else:
-			message('The ' + self.owner.name + ' attacks the ' + target.name + ' but the blow glances away!')
+			#Message that the attack missed.
+			message('The ' + self.owner.name + ' attacks the ' + target.name + ' but the shot is parried', libtcod.red)
+
+	def to_hit(self, target):
+		#Determines whether the owner can hit a target, based on the dexterity of both objects.
+		x = self.dexterity - target.creature.dexterity - 3 + dice(1, 6)
+		if x > 0:
+			return True
+		else:
+			return False
 
 	def take_damage(self, damage):
 		if damage > 0:
@@ -318,17 +332,22 @@ def handle_keys():
 #				elif option == 2:
 #					print 'Loyalty'
 #				else: print 'menu error'
-				for object in current_area.objects:
-					print object.name + ':'
-					if object.inventory and len(object.inventory) > 0:
-						for item in object.inventory:
-							equipped = ''
-							if item.equipment and item.equipment.is_equipped:
-								equipped = ' E'
-							print item.name + equipped
-					else:
-						print object.inventory
-					print ''
+
+#				for object in current_area.objects:
+#					print object.name + ':'
+#					if object.inventory and len(object.inventory) > 0:
+#						for item in object.inventory:
+#							equipped = ''
+#							if item.equipment and item.equipment.is_equipped:
+#								equipped = ' E'
+#							print item.name + equipped
+#					else:
+#						print object.inventory
+#					print ''
+
+				print dice(1, 6)
+				print dice(2, 3)
+				print dice(3, 6)
 
 			if key_char == 'g':
 				#Picking up / [g]rabbing items.
@@ -396,6 +415,22 @@ def get_all_equipped(obj): #Returns a list of equipped items
 	else:
 		return []
 
+def dice(num, sides):
+	#Roll 'num' dice with 'sides' sides.
+	x = 0
+	for i in range(num):
+		x += libtcod.random_get_int(0, 1, sides)
+	return x
+
+def is_blocked(x, y):
+	#Function to determine whether a map tile is blocked or not.
+	if current_area.map[x][y].blocked:
+		return True
+	for object in current_area.objects:
+		if object.blocks and object.x == x and object.y == y:
+			return True
+	return False
+
 def menu(header, options, width,):
 	#The player is presented with some options and makes a choice based on graphics
 	choice = 0
@@ -459,6 +494,10 @@ def monster_death(monster):
 	monster.item.owner = monster
 	message('The ' + monster.name +' has died!')
 	monster.name = 'remains of ' + monster.name
+
+###Magic Functions###
+
+###Rendering Functions###
 
 def initialise_fov():
 	global fov_recompute, fov_map, light_map
@@ -639,14 +678,21 @@ def play_game():
 
 def main_menu():
 	while not libtcod.console_is_window_closed():
-		global key, mouse
+		global key, mouse, areas
 		mouse = libtcod.Mouse()
 		key = libtcod.Key()
-		choice = menu('', ['Play', 'Exit'], 20)
+		choice = menu('', ['New Game', 'Continue', 'Exit'], 20)
 		if choice == 0:
+			new_game()
 			play_game()
 		elif choice == 1:
+			try:
+				areas
+			except NameError:
+				print 'No ongoing game'
+			else:
+				play_game()
+		elif choice == 2:
 			break
 
-new_game()
 main_menu()
