@@ -142,13 +142,13 @@ def handle_keys():
 			if key_char == '<':
 				#Go up stairs.
 				for object in data.current_areas.objects:
-					if object.stairs:
+					if object.stairs and object.x == data.player.x and object.y == data.player.y:
 						object.stairs.go_up(data.player)
 
 			if key_char == '>':
 				#Go up stairs.
 				for object in data.current_areas.objects:
-					if object.stairs:
+					if object.stairs and object.x == data.player.x and object.y == data.player.y:
 						object.stairs.go_down(data.player)
 
 			return 'didnt-take-turn'
