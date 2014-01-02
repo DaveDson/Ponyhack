@@ -123,9 +123,12 @@ def handle_keys():
 						list.append(object.name + equipped)
 					to_use = menu('Inventory', list, 30)
 					if to_use != None:
-						data.inv[to_use].item.use_function()
+						if data.inv[to_use].item.use_function:
+							data.inv[to_use].item.use_function()
+						else:
+							render.message('You can\'t use that item.')
 				else:
-					message('You have nothing in your inventory.')
+					render.message('You have nothing in your inventory.')
 
 			if key_char == 'd':
 				#[d]rop an item.
@@ -137,7 +140,7 @@ def handle_keys():
 					if to_drop != None:
 						data.inv[to_drop].item.drop(data.player)
 				else:
-					message('You have nothing to drop.')
+					render.message('You have nothing to drop.')
 
 			if key_char == '<':
 				#Go up stairs.
