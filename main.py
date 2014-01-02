@@ -108,7 +108,7 @@ def handle_keys():
 			if key_char == 'g':
 				#Picking up / [g]rabbing items.
 				for object in data.current_areas.objects:
-					if object.x == data.player.x and object.y == data.player.y and object != data.player:
+					if object.x == data.player.x and object.y == data.player.y and object.item and object != data.player:
 						object.item.pick_up(data.player)
 
 			if key_char == 'i':
