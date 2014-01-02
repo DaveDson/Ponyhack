@@ -103,10 +103,8 @@ def handle_keys():
 #						print object.inventory
 #					print ''
 
-				print dice(1, 6)
-				print dice(2, 3)
-				print dice(3, 6)
-
+				print 'Nothing to see here!'
+	
 			if key_char == 'g':
 				#Picking up / [g]rabbing items.
 				for object in data.current_areas.objects:

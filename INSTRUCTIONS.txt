@@ -10,7 +10,7 @@ Arrow keys/ number pad: Move/attack
 g: Pick up item
 i: Inventory/use item
 d: Drop item
-t: Test (Currently prints some random numbers to the console)
+t: Test (Currently has no function)
 >: Go down stairs
 <: Go up stairs
 ESC: Main menu
