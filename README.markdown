@@ -6,6 +6,11 @@ Introduction
 
 This is the beginnings of a game in which the player will be able to explore the magical world of Equestria, interacting with the ponies and beating up various monsters and bad guys. Currently little more than a character moving around a screen.
 
+How To Play
+-----------
+
+Simply download and run main.py through a Python 2.7.3 interpreter.
+
 Archetecture
 ------------
 
