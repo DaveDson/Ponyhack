@@ -154,12 +154,14 @@ def ponyville():
 	#Generate objects.
 	data.player = objectgen.gen_player()
 	practice_dummy = objectgen.gen_dummy()
+	pinkie = objectgen.gen_pinkie()
 	sword = objectgen.gen_sword()
 	shield = objectgen.gen_shield()
 	area.objects.append(sword)
 	area.objects.append(shield)
 	area.objects.append(data.player)
 	area.objects.append(practice_dummy)
+	area.objects.append(pinkie)
 	return area
 
 def ponyville_north():

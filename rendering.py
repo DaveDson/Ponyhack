@@ -38,11 +38,19 @@ FOV_ALGO = libtcod.FOV_SHADOW
 TORCH_RADIUS = 71
 FOV_LIGHT_WALLS = True
 
+#Colors for the menus.
+MENU_HILIGHT = libtcod.Color(120, 153, 34)
+MENU_SELECTED = libtcod.yellow
+
 #The panel with various game information
 panel = libtcod.console_new(PANEL_WIDTH, PANEL_HEIGHT)
 
 #The virtual console the map will be drawn on before blitting to root
 mapcon = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
+
+global key, mouse
+key = libtcod.Key()
+mouse = libtcod.Mouse()
 
 def initialise_fov():
 	global fov_recompute
@@ -180,3 +188,89 @@ def message(new_msg, color=libtcod.white):
 
 		game_msgs.append( (line, color) )
 
+def info(msg):
+	#Function to display temporary information.
+	msg_lines = textwrap.wrap(msg, MSG_WIDTH)
+	height = len(msg_lines)
+	window = libtcod.console_new(MSG_WIDTH, height)
+	libtcod.console_set_default_foreground(window, libtcod.white)
+
+	for i, line in enumerate(msg_lines):
+		libtcod.console_print_ex(window, 0, i, libtcod.BKGND_NONE, libtcod.LEFT, line)
+
+	libtcod.console_blit(window, 0, 0, MSG_WIDTH, height, 0, MAP_WINDOW_WIDTH, SCREEN_HEIGHT - MSG_HEIGHT - height - 1)
+	libtcod.console_flush()
+
+def menu(header, options, width=30, talk=False):
+	#The player is presented with some options and makes a choice based on graphics
+	choice = 0
+	new_choice = 0
+
+	#Calculate total height for header (after auto-wrap) and one line per option
+	header_height = libtcod.console_get_height_rect(mapcon, 0, 0, width, SCREEN_HEIGHT, header)
+	height = len(options) + header_height
+
+	if talk:
+		width = 50
+		x = 0
+		y = SCREEN_HEIGHT - height
+
+	else:
+		x = SCREEN_WIDTH/2 - width/2
+		y = SCREEN_HEIGHT/2 - height/2
+
+	#Create the virtual console to write the menu on
+	window = libtcod.console_new(width, height)
+
+	while not libtcod.console_is_window_closed():
+		#Clear the console ready to draw
+		libtcod.console_clear(window)
+
+		#Draw the header
+		libtcod.console_set_default_foreground(window, libtcod.white)
+		libtcod.console_print_rect_ex(window, 0, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+
+		#Iterate through and print the options, highlighting the current selection.
+		i = header_height
+		for index, option in enumerate(options):
+			libtcod.console_set_default_foreground(window, libtcod.white)
+
+			if index == choice:
+				#Draw an arrow and hilight the option.
+				libtcod.console_set_default_foreground(window, MENU_HILIGHT)
+				libtcod.console_print_ex(window, 0, i, libtcod.BKGND_NONE, libtcod.LEFT, '>')
+
+			libtcod.console_print_ex(window, 1, i, libtcod.BKGND_NONE, libtcod.LEFT, option)
+			i += 1
+
+		#Blit the window to the root and flush to render everything.
+		libtcod.console_blit(window, 0, 0, width, height, 0, x, y)
+		libtcod.console_flush()
+
+		
+		libtcod.sys_wait_for_event(libtcod.EVENT_KEY_PRESS, key, mouse, True)
+		if key.vk == libtcod.KEY_ENTER:
+			return choice
+		if key.vk == libtcod.KEY_ESCAPE:
+			return None
+		#Up and down arrows change selection
+		elif key.vk == libtcod.KEY_UP or key.vk == libtcod.KEY_KP8:
+			new_choice = choice - 1
+		elif key.vk == libtcod.KEY_DOWN or key.vk == libtcod.KEY_KP2:
+			new_choice = choice + 1
+		#Check that we're not selecting outside the boundary
+		if 0 <= new_choice < len(options):
+			choice = new_choice
+
+def image(file_string):
+	#Create the image console.
+	imagecon = libtcod.console_new(MAP_WINDOW_WIDTH, MAP_WINDOW_HEIGHT)
+
+	img = libtcod.image_load('resources/' + file_string)
+
+	#Set green as the transparent colour.
+	#libtcod.console_set_key_color(imagecon, libtcod.Color(0, 255, 0))
+
+	#Render the image and blit it to the root console.
+	libtcod.image_blit_rect(img, imagecon, 0, 0, -1, -1, libtcod.BKGND_SET)
+	libtcod.console_blit(imagecon, 0, 0, 50, 50, 0, 0, 0)

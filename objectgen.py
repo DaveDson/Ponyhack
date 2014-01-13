@@ -21,13 +21,14 @@ import libtcodpy as libtcod
 import math
 import data
 import rendering as render
+import talk
 
 MAP_WIDTH = data.MAP_WIDTH
 MAP_HEIGHT = data.MAP_HEIGHT
 
 class Object:
 	#Generic class for all map objects
-	def __init__(self, x, y, X, Y, Z, name, char, color, blocks=False, inventory=None, light_emittance=0, creature=None, item=None, equipment=None, ai=None, stairs=None):
+	def __init__(self, x, y, X, Y, Z, name, char, color, blocks=False, inventory=None, light_emittance=0,  talk_function=None, creature=None, item=None, equipment=None, ai=None, stairs=None):
 		self.x = x
 		self.y = y
 		self.X = X
@@ -40,6 +41,7 @@ class Object:
 		self.inventory = inventory
 		self.light_emittance = light_emittance
 		self.light_map = None
+		self.talk_function = talk_function
 		#Tell any components what owns them
 		self.creature = creature
 		if self.creature:
@@ -332,16 +334,25 @@ def is_blocked(x, y):
 ###GENERATION FUNCTIONS###
 
 def gen_player():
-	return Object(MAP_WIDTH/2, MAP_HEIGHT/2, 0, 0, 0, 'Player', '@', libtcod.white, light_emittance=12, creature=Creature(20, stamina=20, strength=5, dexterity=5, toughness=3, death_function=player_death))
+	creature_component = Creature(20, stamina=20, strength=5, dexterity=5, toughness=3, death_function=player_death)
+	return Object(MAP_WIDTH/2, MAP_HEIGHT/2, 0, 0, 0, 'Player', '@', libtcod.white, light_emittance=12, creature=creature_component)
 
 def gen_dummy():
-	return Object(MAP_WIDTH/2, MAP_HEIGHT/2 + 2, 0, 0, 0, 'Practice Dummy', 'd', libtcod.red, creature=Creature(hp=10, stamina=10, strength=5, dexterity=5, toughness=2, death_function=mob_death), ai=StaticMob())
+	creature_component = Creature(hp=10, stamina=10, strength=5, dexterity=5, toughness=2, death_function=mob_death)
+	ai_component = StaticMob()
+	return Object(MAP_WIDTH/2, MAP_HEIGHT/2 + 2, 0, 0, 0, 'Practice Dummy', 'd', libtcod.red, creature=creature_component , ai=ai_component)
+
+def gen_pinkie():
+	creature_component = Creature(hp=10, stamina=10, strength=5, dexterity=5, toughness=2, death_function=mob_death)
+	return Object(MAP_WIDTH/2, MAP_HEIGHT/2 - 2, 0, 0, 0, 'Pinkie Pie', 'p', libtcod.pink, talk_function=talk.pinkie_pie, creature=creature_component)
 
 def gen_sword():
-	return Object(MAP_WIDTH/2 + 2, MAP_HEIGHT/2, 0, 0, 0, 'Sword', '/', libtcod.darker_red, light_emittance=8, equipment=Equipment(strength_bonus=2))
+	equipment_component = Equipment(strength_bonus=2)
+	return Object(MAP_WIDTH/2 + 2, MAP_HEIGHT/2, 0, 0, 0, 'Sword', '/', libtcod.darker_red, light_emittance=8, equipment=equipment_component)
 
 def gen_shield():
-	return Object(MAP_WIDTH/2 - 2, MAP_HEIGHT/2, 0, 0, 0, 'Shield', '[', libtcod.darker_blue, equipment=Equipment(toughness_bonus=3))
+	equipment_component = Equipment(toughness_bonus=3)
+	return Object(MAP_WIDTH/2 - 2, MAP_HEIGHT/2, 0, 0, 0, 'Shield', '[', libtcod.darker_blue, equipment=equipment_component)
 
 def gen_up_stairs():
 	return Object(MAP_WIDTH/2, MAP_HEIGHT/2, 0, -1, 1, 'Up stairs', '<', libtcod.white, stairs=Stairs('up'))

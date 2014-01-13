@@ -1,4 +1,4 @@
-This game is very much in an alpha state. You start on a grass field near a sword and shield, both of which can be picked up([g]rabbed) and [d]ropped. Both can be equipped by selecting them from the [i]nventory menu. The sword emits light to test the multiple light source system. There is a test dummy to the south that attacks if the player gets too close. There is a pink building to the north west, again testing the lighting/field of view system and collision detection. If you travel off the map to the north, you will find a new area with a large blue building, with a sky blue window and a brown door. Inside there are stairs down to a basement/dungeon. You can't move outside these two areas.
+This game is very much in an alpha state. You start on a grass field near a sword and shield, both of which can be picked up([g]rabbed) and [d]ropped. Both can be equipped by selecting them from the [i]nventory menu. The sword emits light to test the multiple light source system. There is a test dummy to the south that attacks if the player gets too close. There is a pink building to the north west, again testing the lighting/field of view system and collision detection. You can find Pinkie Pie to the north, and [t]alk to her, although she doesn't say much yet. If you travel off the map to the north, you will find a new area with a large blue building, with a sky blue window and a brown door. Inside there are stairs down to a basement/dungeon. You can't move outside these two areas.
 
 To play the game, run main.py through a Python 2.7.3 interpreter.
 
@@ -6,11 +6,11 @@ KEY BINDINGS
 
 Gameplay
 
-Arrow keys/ number pad: Move/attack
+Arrow keys/number pad: Move/attack
 g: Pick up item
 i: Inventory/use item
 d: Drop item
-t: Test (Currently has no function)
+t: Talk
 >: Go down stairs
 <: Go up stairs
 ESC: Main menu
